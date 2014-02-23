@@ -5,15 +5,10 @@ This will be broken out it multiple repos.
   2. An empty project skeleton / boilerplate for [Flask](http://flask.pocoo.org/) projects.
   3. An empty project skeleton / boilderplay for [Vangrant](http://www.vagrantup.com/) using [Ansible](http://www.ansible.com) to configure a fulling working virtual machine.
 
-## Why?
-
-Most other Angular brunches either had outdated libraries or contained a setup
-for an external templating engine, such as Jade. Since my editor supports Zen
-Coding plugins, I didn't find the creation of HTML templates troublesome.
-
 ## Requirements
 
 1. Vargrant
+2. Ansible
 
 ## Usage
 
