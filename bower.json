@@ -1,0 +1,11 @@
+{
+  "name": "Your Skeletons Application's Name",
+  "version": "0.0.1",
+  "main": "public/app.js",
+  "dependencies": {
+    "angular-ui-router": "0.2.8-bowratic-tedium",
+    "angular-ui-bootstrap-bower": ">=0.5.0",
+    "bootstrap": ">=3.0.0"
+  },
+  "overrides": {}
+}

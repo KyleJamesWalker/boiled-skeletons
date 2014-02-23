@@ -1,0 +1,138 @@
+---
+- hosts: local
+  connection: local
+
+  tasks:
+
+    - name: "Quiet the mind, and the ssh will access..."
+      command: sleep 5
+
+    - name: "Ensure ssh key is passed to Vagrant"
+      command: ssh-add
+
+- hosts: vagrant
+
+  vars:
+
+    skeletons_root: /home/vagrant/skeletons
+
+    log_root: /home/vagrant/skeletons/logs
+
+  tasks:
+
+    - action: shell whoami
+      register: whoami
+
+    - name: Remove unused grub package
+      apt: pkg=grub-pc state=absent
+      sudo: yes
+
+    - name: Update apt package cache
+      apt: update_cache=yes cache_valid_time=3600
+      sudo: yes
+
+    - name: Install packages for add-apt-repository
+      apt: pkg=python-software-properties state=latest
+      sudo: yes
+
+    - name: Add repositories
+      apt_repository: repo={{item}} state=present
+      sudo: yes
+      with_items:
+        - 'ppa:nginx/stable'
+        - 'ppa:chris-lea/node.js'
+        - 'ppa:fkrull/deadsnakes'
+
+    - name: Update apt package cache
+      apt: update_cache=yes cache_valid_time=3600
+      sudo: yes
+
+    - name: Upgrade apt packages
+      apt: upgrade=yes
+      sudo: yes
+
+    - name: Install packages
+      apt: pkg={{item}} state=latest
+      sudo: yes
+      with_items:
+        - g++
+        - git
+        - make
+        - nginx
+        - nodejs
+        - python2.7
+        - python2.7-dev
+        - python-pip
+        - ruby1.9.1
+        - rubygems
+        - zlib1g-dev
+      notify:
+        - restart nginx
+
+    - name: Pip install virtualenv, uwsgi
+      pip: name={{item}} executable=pip-2.7
+      sudo: yes
+      with_items:
+        - virtualenv
+        - uwsgi
+
+    - name: Create needed directories
+      file: path={{item}} state=directory
+      with_items:
+        - "{{skeletons_root}}"
+        - "{{log_root}}/nginx"
+        - "{{log_root}}/uwsgi"
+
+    - name: Configure nginx
+      template: src={{item.src}} dest={{item.dest}} owner=root group=root mode=0644
+      sudo: yes
+      with_items:
+        - src: ../files/nginx-site
+          dest: /etc/nginx/sites-available/default
+        - src: ../files/nginx-upstart
+          dest: /etc/init/nginx.conf
+      notify: restart nginx
+
+    - name: Create uWSGI directories
+      file: path=/etc/uwsgi/vassals state=directory owner=root group=root
+      sudo: yes
+
+    - name: Configure uWSGI
+      template: src={{item.src}} dest={{item.dest}} owner=root group=root mode=0644
+      sudo: yes
+      with_items:
+        - src: ../files/uwsgi-upstart
+          dest: /etc/init/uwsgi.conf
+        - src: ../files/skeletons.ini
+          dest: /etc/uwsgi/vassals/skeletons.ini
+      notify: restart uwsgi
+
+    - name: Install python requirements (virtualenv).
+      pip: requirements={{skeletons_root}}/requirements.txt virtualenv={{skeletons_root}}/venv virtualenv_command=virtualenv-2.7 virtualenv_site_packages=yes
+
+    - name: Install brunch (global).
+      npm: name=brunch global=yes
+      sudo: yes
+
+    - name: Install bower (global).
+      npm: name=bower global=yes
+      sudo: yes
+
+    - name: Install skeletons npm packages.
+      npm: path={{skeletons_root}}
+
+    - name: Install skeletons bower packages.
+      command: bower install chdir={{skeletons_root}}
+
+    - name: Brunch build.
+      command: brunch build chdir={{skeletons_root}}
+
+  handlers:
+
+    - name: restart nginx
+      sudo: yes
+      action: service name=nginx state=restarted enabled=yes
+
+    - name: restart uwsgi
+      sudo: yes
+      action: service name=uwsgi state=restarted enabled=yes

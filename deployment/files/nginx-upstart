@@ -1,0 +1,24 @@
+# nginx
+
+# Source: http://wiki.nginx.org/Upstart
+
+#start on (filesystem and net-device-up IFACE=lo)
+start on vagrant-mounted
+stop on runlevel [!2345]
+
+env DAEMON=/usr/sbin/nginx
+env PID=/var/run/nginx.pid
+
+expect fork
+respawn
+respawn limit 10 5
+#oom never
+
+pre-start script
+        $DAEMON -t
+        if [ $? -ne 0 ]
+                then exit $?
+        fi
+end script
+
+exec $DAEMON

@@ -1,0 +1,35 @@
+server {
+     listen 80 default_server;
+     server_name _;
+     root {{skeletons_root}}/public/;
+     access_log {{log_root}}/nginx/skeletons.access.log;
+     error_log {{log_root}}/nginx/skeletons.error.log;
+
+     if (-f {{skeletons_root}}/site_down) {
+         return 503;
+     }
+
+     error_page 503 @maintenance;
+     location @maintenance {
+         root {{skeletons_root}}/;
+         rewrite ^(.*)$ /maintenance.html break;
+     }
+
+    location / {
+          # First attempt to serve request as file, then
+          # as directory, then fall back to displaying a 404.
+          try_files $uri $uri/ /index.html;
+    }
+
+    # Note: If you flask app needs to be mount into another folder
+    # Make sure a url with no trailing slash doesn't try and load a file from root location
+    location = /api { rewrite ^ /api/; }
+    location /api { try_files $uri @api; }
+    location @api {
+          include uwsgi_params;
+          uwsgi_param SCRIPT_NAME /api;
+          uwsgi_modifier1 30;
+          uwsgi_pass 127.0.0.1:5001;
+          uwsgi_read_timeout 300;
+    }
+}
